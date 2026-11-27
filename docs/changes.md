@@ -1665,9 +1665,27 @@ now **two notebooks**, and all evaluation lives in `eval/`:
   the data lab's Jupyter lacks `ipywidgets`. Added a **"Watch live" cell** after
   Status: the status table plus each run's newest progress line, refreshed
   every 30 s; stopping it does not stop training. (When inserting it, the
-  ``/`
+  `
+`/`
 ` in one line were turned into real line breaks by shell escaping;
   caught by the compile check and rebuilt from raw strings.)
+- **Back to training inside the notebook (27 Nov, Yuvraj).** The background
+  processes were hard to follow: no progress bar in the notebook, Status/Watch
+  cells to re-run, and a kernel restart did *not* stop them (by design), which
+  was confusing. He stopped both runs. Now:
+  - no `subprocess`, no `PARALLEL`, no Launch/Status/Watch cells;
+  - **Train B** and **Train C** cells train in the notebook, one after the
+    other. Ultralytics draws its own progress bar (no `ipywidgets` needed), so
+    the live bar shows under the cell;
+  - **automatic resume**: a run with `last.pt` and fewer than `EPOCHS` epochs
+    continues from its last epoch (its original settings come from the
+    checkpoint); a finished run is skipped; `FRESH_START = True` starts over.
+    This replaces `RESUME`, so a forgotten flag can never restart a run from
+    zero and lose hours;
+  - each run copies its best weights and curves into `trained/` and `results/`
+    when it ends (no separate Finish step); a *Summary* cell prints both.
+  - Cost: B and C now run one after the other, about 4 h each instead of about
+    4 h together.
 
 - **GitHub repository** `github.com/yuvrajghag5/Kontur` (public; its link goes to
   the professor). GitHub had created it with an MIT licence. Kontur imports

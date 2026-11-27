@@ -184,17 +184,18 @@ to Ultralytics' published 0.395 AP.
    `KONTUR_DATA` so both notebooks find it). Then run the cells in order:
    - **Steps 1–4 (data):** annotations (241 MB), then every image it needs (about
      18 GB; images already downloaded are reused), then the YOLO labels.
-   - **Quick check** (optional, ~5 min): one tiny epoch of B and C, to catch
+   - **Quick check** (optional, ~1 min): one tiny epoch of B and C, to catch
      problems before the long run.
-   - **Launch:** starts B and C as **background processes**, by default both at
-     once on the one GPU (`PARALLEL = True`). They keep running when the browser
-     tab closes. 50 epochs each (`EPOCHS`), batch 64 for both: roughly 10–20 h on
-     one RTX A6000.
-   - **Status:** re-run any time: epochs done, hours left, best val mAP.
-   - **Finish:** when both are done, copies the weights and curves into
-     `trained/` and `results/`.
+   - **Train B**, then **Train C**: each trains **inside the notebook**, with
+     YOLO's live progress bar under the cell. Both use the same settings: 50
+     epochs, batch 64, the same 30,000 train images (`TRAIN_FRACTION`), and no
+     data-loading workers (`WORKERS = 0`; the data lab's `/dev/shm` is only
+     64 MB). About 4 h each on the RTX A6000.
+   - **Summary:** both runs' final numbers. Each run's best weights and curves
+     are copied into `trained/` and `results/` automatically when it ends.
 
-   If the data lab stops the runs, set `RESUME = True` and run *Launch* again.
+   **Interrupted?** Run the same *Train* cell again: an unfinished run continues
+   from its last saved epoch; a finished run is skipped.
 3. Open `eval/04_scratch_vs_pretrained.ipynb` and Run All.
 
 **What it writes:**

@@ -1657,6 +1657,17 @@ now **two notebooks**, and all evaluation lives in `eval/`:
   the train split only and accepts an image count). B and C still run in
   parallel: with 0 workers each run loads on one CPU core, and there are 20.
   The report states that B and C were trained on a 30k-image subset and why.
+- **Training started on the data lab (27 Nov evening).** The quick check passed;
+  B and C launched in parallel. Measured: about **5 min per epoch** for each run
+  (30k images, 0 workers), so about **4 h** for 50 epochs. After epoch 1: val
+  mAP50-95 B 0.0003, C 0.288. Yolo's progress bars were invisible in the
+  notebook: the runs are background processes writing to `runs/<tag>.log`, and
+  the data lab's Jupyter lacks `ipywidgets`. Added a **"Watch live" cell** after
+  Status: the status table plus each run's newest progress line, refreshed
+  every 30 s; stopping it does not stop training. (When inserting it, the
+  ``/`
+` in one line were turned into real line breaks by shell escaping;
+  caught by the compile check and rebuilt from raw strings.)
 
 - **GitHub repository** `github.com/yuvrajghag5/Kontur` (public; its link goes to
   the professor). GitHub had created it with an MIT licence. Kontur imports

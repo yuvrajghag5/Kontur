@@ -39,7 +39,7 @@ save compared with labelling by hand.
 | 4e. Kontur: name, look, folders, motion | New name; hero with looping demo; card mosaics; delete on every card; folder upload (picker + drop); marching-ants AI proposals; reduced motion respected | **done, run by Yuvraj** (25 Nov) |
 | 4f. Export dialog | Choose formats: COCO, YOLO detection, YOLO segmentation, Pascal VOC, PNG masks, CSV, photos with labels drawn; include photos; only labelled photos | **done, run by Yuvraj** (25 Nov: "looks fine") |
 | 5. **Evaluation (graded)** | Model quality on COCO; effort saved, manual vs assisted | **done** (`eval/01`, `01b`, `02`, `03`; pilot + balanced study). Results: `changes.md` Phase 5 §4, `eval/results/`. Re-run 03 with `RUN="pilot"` and `"balanced"` so saved outputs carry the final fixes |
-| 5b. Own training: scratch vs pretrained | `training/train_yolo11n_coco5.ipynb` trains YOLO11n from scratch (B) and fine-tuned (C); `eval/04_scratch_vs_pretrained.ipynb` compares them with the pretrained A on COCO val2017 | **prepared 27 Nov, not yet run** (data lab GPU) |
+| 5b. Own training: scratch vs pretrained | `training/train_yolo11n_coco.ipynb` trains YOLO11n from scratch (B) and fine-tuned (C) on all 80 COCO classes; `eval/04_scratch_vs_pretrained.ipynb` compares them with the pretrained A on all 5,000 COCO val2017 images | **prepared 27 Nov; data downloaded on the data lab (RTX A6000); training not started** |
 | 6. Report and submission | Report, demo, source, citations | **in progress**: outline in `report/outline.md`, sections 1–5 drafted in `report/report.md` (due Sun 29 Nov) |
 | 7. Satellite mode back in (optional) | Archived mode as a second image type | only if time allows |
 

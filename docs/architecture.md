@@ -169,7 +169,7 @@ AI annotator/                 (the app is called Kontur)
 │   ├── data/                 COCO annotations and the image subsets
 │   ├── results/              tables and charts the notebooks write (04: scratch_vs_pretrained/)
 │   └── studies/              data_study/ (pilot), data_study2/ (balanced): read by notebook 03; never delete
-├── training/                 train_yolo11n_coco5.ipynb (B from scratch, C fine-tuned; GPU; how to run: README);
+├── training/                 train_yolo11n_coco.ipynb (B from scratch, C fine-tuned, 80 classes; GPU; how to run: README);
 │                             data/ (COCO, not in git), trained/ (our weights), results/ (evidence)
 ├── docs/                     GUIDE, phase, design, architecture, tech, changes
 ├── report/                   outline.md, report.md

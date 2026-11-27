@@ -152,48 +152,60 @@ Results are written to `eval/results/`.
 
 Kontur suggests objects with YOLO11n **pretrained** on COCO by Ultralytics: the
 file `weights/yolo11n.pt`. To measure what those pretrained weights are worth,
-`training/train_yolo11n_coco5.ipynb` trains the **same network ourselves**, and
-`eval/04_scratch_vs_pretrained.ipynb` compares the three:
+`training/train_yolo11n_coco.ipynb` trains the **same network ourselves, on the
+same 80 COCO classes**, and `eval/04_scratch_vs_pretrained.ipynb` compares the
+three. All three do exactly the same job:
 
 | | Model | Starts from | Trained by |
 |---|---|---|---|
 | A | YOLO11n, the one Kontur uses | `weights/yolo11n.pt` as downloaded | Ultralytics (evaluated only) |
 | B | YOLO11n **from scratch** | **random weights** (`yolo11n.yaml`) | us |
-| C | YOLO11n fine-tuned | a copy of `weights/yolo11n.pt` | us, same data and epochs as B |
+| C | YOLO11n fine-tuned | a copy of `weights/yolo11n.pt` (only read) | us, same data, epochs and batch as B |
 
-Five classes (person, car, bicycle, dog, chair: the effort-study classes). Train
-and val come from COCO train2017, the test from COCO val2017, so no model is
+Train and val come from COCO train2017, the test from COCO val2017, so no model is
 compared on images it was trained or tuned on:
 
 | Split | From | Used for |
 |---|---|---|
-| train | class-balanced 20k images of COCO train2017 | training B and C |
-| val | 1,000 other train2017 images | picking the best epoch |
-| test | every COCO val2017 image with the classes | only the comparison in `eval/04` |
+| val | 1,000 random train2017 images, chosen first | picking the best epoch |
+| train | every other train2017 image with an object (~116k) | training B and C |
+| test | all 5,000 COCO val2017 images: the official benchmark | only the comparison in `eval/04` |
+
+A sanity check comes for free: on the official benchmark, A should score close
+to Ultralytics' published 0.395 AP.
 
 **On the data lab:**
 
 1. Clone the repository and run `pip install -r requirements.txt` (this same file).
    Then check the GPU is visible:
    `python -c "import torch; print(torch.cuda.is_available())"` must print `True`.
-2. Open `training/train_yolo11n_coco5.ipynb`. In **Settings**, `DATA_DIR` is where
+2. Open `training/train_yolo11n_coco.ipynb`. In **Settings**, `DATA_DIR` is where
    COCO is downloaded (default `training/data/`; or set the environment variable
-   `KONTUR_DATA` so both notebooks find it). Run All: it downloads the COCO
-   annotations (241 MB) and only the images it needs (about 3–4 GB), writes the
-   YOLO labels, then trains B and C (about 2–4 h each on a modern GPU). If the
-   session stops, set `RESUME = True` and run the training cell again; downloads
-   skip what is already there.
+   `KONTUR_DATA` so both notebooks find it). Then run the cells in order:
+   - **Steps 1–4 (data):** annotations (241 MB), then every image it needs (about
+     18 GB; images already downloaded are reused), then the YOLO labels.
+   - **Quick check** (optional, ~5 min): one tiny epoch of B and C, to catch
+     problems before the long run.
+   - **Launch:** starts B and C as **background processes**, by default both at
+     once on the one GPU (`PARALLEL = True`). They keep running when the browser
+     tab closes. 50 epochs each (`EPOCHS`), batch 64 for both: roughly 10–20 h on
+     one RTX A6000.
+   - **Status:** re-run any time: epochs done, hours left, best val mAP.
+   - **Finish:** when both are done, copies the weights and curves into
+     `trained/` and `results/`.
+
+   If the data lab stops the runs, set `RESUME = True` and run *Launch* again.
 3. Open `eval/04_scratch_vs_pretrained.ipynb` and Run All.
 
 **What it writes:**
 
 | Folder | Holds | In git |
 |---|---|---|
-| `training/data/` | COCO annotations, images, YOLO labels, `coco5.yaml` | no (large, re-downloadable) |
-| `training/runs/` | Ultralytics' full training logs and checkpoints | no |
-| `training/trained/` | **our** weights: `yolo11n_B_scratch_coco5.pt`, `yolo11n_C_finetune_coco5.pt` (~5 MB each) | **yes** |
+| `training/data/` | COCO annotations, images, YOLO labels, `coco80.yaml` | no (large, re-downloadable) |
+| `training/runs/` | Ultralytics' full training logs and checkpoints, and each run's `.log` | no |
+| `training/trained/` | **our** weights: `yolo11n_B_scratch_coco.pt`, `yolo11n_C_finetune_coco.pt` (~5 MB each) | **yes** |
 | `training/results/` | GPU, versions, settings and hours (`environment.json`); the image ids of every split (`dataset.json`); each run's curves, confusion matrix and settings | **yes** |
-| `eval/results/scratch_vs_pretrained/` | metrics per model, `comparison.csv`, `ap_per_class.png`, `learning_curves.png` | **yes** (raw detections: no) |
+| `eval/results/scratch_vs_pretrained/` | metrics per model, `comparison.csv`, `per_class_ap.csv` (80 classes), `ap_per_class.png`, `scratch_vs_pretrained_per_class.png`, `learning_curves.png` | **yes** (raw detections: no) |
 
 ## Folder layout
 
@@ -202,7 +214,7 @@ compared on images it was trained or tuned on:
 | `app/` | The app: Python server (`server.py`, `models.py`, …) and the browser UI (`static/`) |
 | `weights/` | The four pretrained weight files (MobileSAM, YOLO11n, YOLOE-11s, YOLOE's text encoder) |
 | `eval/` | All evaluation: notebooks 01–03 and `evallib.py`, plus 04 (pretrained vs from scratch vs fine-tuned); `data/` (COCO subsets), `results/`, `studies/` (the two effort studies) |
-| `training/` | Model creation: `train_yolo11n_coco5.ipynb` trains YOLO11n from scratch and fine-tuned (run on a GPU); `trained/` holds our weights, `results/` the training evidence. See "Training our own YOLO11n" above |
+| `training/` | Model creation: `train_yolo11n_coco.ipynb` trains YOLO11n from scratch and fine-tuned (run on a GPU); `trained/` holds our weights, `results/` the training evidence. See "Training our own YOLO11n" above |
 | `docs/` | Project documents, below |
 | `report/` | The exam report (`report.md`) and its outline |
 | `data/` | Created at run time: your projects (`projects.json`, `projects/<id>/`, `trash/`) |

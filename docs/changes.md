@@ -1604,6 +1604,44 @@ now **two notebooks**, and all evaluation lives in `eval/`:
   `training/requirements.txt` were removed. The root `requirements.txt` already
   held every package the training needs, and now says so. COCO is now credited
   in the README.
+- **Switched to all 80 COCO classes** (27 Nov, Yuvraj: "A can detect all 80
+  classes, B and C only 5: that doesn't sound fair"). Training on all of
+  train2017 now fits on the data lab GPU (one RTX A6000, 48 GB). He ran the 5-class
+  version's data steps first (21k images downloaded) and pushed the notebook;
+  it was pulled and rewritten (renamed `train_yolo11n_coco.ipynb`):
+  - **Classes:** all 80, read from the annotations, in COCO's order (= YOLO's 0–79).
+  - **Splits:** val = 1,000 random train2017 images **chosen first**; train = every
+    other train2017 image with an object (~116k); test = **all 5,000 val2017
+    images**, the official benchmark. A should therefore score close to
+    Ultralytics' published 0.395 AP: a free sanity check of the evaluation.
+  - **Folders kept in sync with the splits:** already-downloaded images are moved
+    to their new split's folder, strays deleted, labels and YOLO label caches
+    rebuilt. The 21k images from the 5-class run are reused.
+  - **Fair settings:** fixed `BATCH = 64` for both (AutoBatch could pick
+    different sizes), `EPOCHS = 50` (fits one GPU before Sunday), no early stop.
+  - **B and C run in parallel** on the one GPU, as background processes
+    (`subprocess`, own session, log per run), so a closed browser tab does not
+    stop them. A *Status* cell (epochs, hours left, best val mAP) and a *Finish*
+    cell (copies best weights and curves into `trained/` and `results/`).
+  - **Quick check** cell: one epoch of B and C on 1% of the data before the long run.
+  - eval/04: 80 classes, all 5,000 test images, a per-class CSV, an 80-class chart,
+    a B-vs-A scatter per class, and the 0.395 sanity line.
+
+  Issues found while writing it (nothing run yet):
+  - **(e) The 5-class val split had no bicycles** (`bicycle: 0, dog: 4` in his run):
+    val was drawn *after* the balanced train selection had used up the rare
+    classes. Fixed by choosing val first.
+  - **(f) Stale images would leak between splits:** YOLO trains on every file in
+    `images/train`, so an image from the old split left there would be trained
+    on even if it is now in val. Fixed by syncing each folder to its split.
+  - **(g) Two runs racing on shared files:** the AMP self-check model and YOLO's
+    label caches are written by whichever run starts first. Fixed: C starts only
+    once B has built the caches; caches left by the quick check (built for 1% of
+    the data) are deleted before launch.
+  - **(h) Restart-safety:** after a kernel restart, Status and Finish work after
+    re-running only the first cells; `environment.json` keeps its original start
+    time. An evaluation edge case (a model with no detections) no longer crashes.
+
 - **GitHub repository** `github.com/yuvrajghag5/Kontur` (public; its link goes to
   the professor). GitHub had created it with an MIT licence. Kontur imports
   Ultralytics, which is AGPL-3.0, so at Yuvraj's choice the licence was switched to

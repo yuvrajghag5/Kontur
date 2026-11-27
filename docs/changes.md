@@ -1642,6 +1642,22 @@ now **two notebooks**, and all evaluation lives in `eval/`:
     re-running only the first cells; `environment.json` keeps its original start
     time. An evaluation edge case (a model with no detections) no longer crashes.
 
+- **First launch on the data lab failed (27 Nov): `/dev/shm` is 64 MB.** The data
+  steps ran cleanly (train 116,266 images, val 1,000, test 5,000; all 80 classes in
+  every split; machine: RTX A6000, 20 CPU cores). The quick check then failed with
+  hundreds of `unable to allocate shared memory(shm) ... No space left on device`.
+  Cause: PyTorch's data-loading workers hand each batch to the training process
+  through shared memory; one batch of 64 images at 640 px is ~78 MB, and the
+  container (Docker default) has 64 MB. Fix, with Yuvraj: `WORKERS = 0` (the
+  training process loads images itself; no shared memory) and, to fit the
+  deadline without workers, **`TRAIN_FRACTION = 30_000`**: Ultralytics' `fraction`
+  takes exactly 30,000 train images (the first in file-name order, i.e. COCO id
+  order), the same for B and C; val and test stay complete; no data step re-run,
+  nothing deleted (checked in the installed Ultralytics: `fraction` applies to
+  the train split only and accepts an image count). B and C still run in
+  parallel: with 0 workers each run loads on one CPU core, and there are 20.
+  The report states that B and C were trained on a 30k-image subset and why.
+
 - **GitHub repository** `github.com/yuvrajghag5/Kontur` (public; its link goes to
   the professor). GitHub had created it with an MIT licence. Kontur imports
   Ultralytics, which is AGPL-3.0, so at Yuvraj's choice the licence was switched to

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kontur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<header>
+  <a class="brand" href="#/" title="All projects"><span class="mark" aria-hidden="true"></span><span class="word">Kontur</span></a>
+
+  <nav class="crumbs ws" aria-label="Breadcrumb">
+    <a href="#/" id="crumbHome">Projects</a><span class="sep" aria-hidden="true">›</span><b id="projName"></b>
+  </nav>
+
+  <nav class="seg ws" id="tools" aria-label="Tools">
+    <button data-tool="select" title="Select and edit (V)">Select<kbd>V</kbd></button>
+    <button data-tool="box" title="Draw a box (B)">Box<kbd>B</kbd></button>
+    <button data-tool="polygon" title="Draw a polygon (P)">Polygon<kbd>P</kbd></button>
+    <button data-tool="ai" id="aiBtn" class="ai" title="Click an object to outline it (A, assisted mode)">AI outline<kbd>A</kbd></button>
+  </nav>
+
+  <div class="spacer"></div>
+
+  <div class="seg mode ws" role="group" aria-label="Labelling mode"
+       title="Manual: no AI at all. Assisted: AI outline and suggestions.">
+    <button id="modeManual" data-mode="manual">Manual</button>
+    <button id="modeAssisted" data-mode="assisted" class="ai">Assisted</button>
+  </div>
+
+  <div class="addgroup ws" role="group" aria-label="Add photos">
+    <label class="btn" title="Add photos (or drop photos and folders anywhere)">
+      Add photos <input type="file" id="fileInp" accept="image/*" multiple hidden>
+    </label>
+    <label class="btn" title="Add every photo in a folder, including its subfolders">
+      Add folder <input type="file" id="dirInp" webkitdirectory directory multiple hidden>
+    </label>
+  </div>
+  <button class="primary ws" id="exportBtn" title="Choose formats and download the labels as a zip">Export</button>
+  <button class="primary home-only" id="newProjBtn2" title="Start a new project (N)">New project</button>
+</header>
+
+<section id="home" aria-labelledby="homeTitle">
+  <div class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Kontur · AI-assisted photo labelling</p>
+      <h1 class="hero-title"><span>Point at it.</span><span class="ai-word">The model traces it.</span><span class="you-word">You decide.</span></h1>
+      <p class="hero-sub">Label photos with boxes and outlines. One click and MobileSAM draws the outline;
+        YOLO suggests the objects it recognises. Nothing is saved until you accept it.</p>
+      <div class="hero-actions">
+        <button class="primary big" id="newProjBtn" title="Start a new project (N)">New project<kbd>N</kbd></button>
+        <span class="hero-stats mono" id="homeStats"></span>
+      </div>
+    </div>
+    <!-- the signature: what the app does, on a loop. Click, trace, save. -->
+    <figure class="demo" aria-hidden="true">
+      <svg viewBox="0 0 360 250">
+        <defs>
+          <pattern id="dots" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#0000001c"/></pattern>
+        </defs>
+        <rect class="d-table" x="0" y="0" width="360" height="250" rx="10"/>
+        <rect x="0" y="0" width="360" height="250" rx="10" fill="url(#dots)"/>
+        <g class="d-photo">
+          <rect x="40" y="28" width="280" height="194" rx="3" fill="#e9edf0"/>
+          <rect x="40" y="168" width="280" height="54" fill="#d3d9de"/>
+          <path class="d-steam" d="M175 70 q-8 -12 0 -24 M195 70 q-8 -12 0 -24" />
+          <path class="d-obj" d="M150 95 Q150 88 157 88 L223 88 Q230 88 230 95 L230 110 Q262 112 262 135 Q262 158 230 160 L230 172 Q230 182 220 182 L160 182 Q150 182 150 172 Z M230 122 L230 148 Q246 146 246 135 Q246 124 230 122 Z" fill-rule="evenodd"/>
+        </g>
+        <path class="d-fill" d="M150 95 Q150 88 157 88 L223 88 Q230 88 230 95 L230 110 Q262 112 262 135 Q262 158 230 160 L230 172 Q230 182 220 182 L160 182 Q150 182 150 172 Z"/>
+        <path class="d-trace" pathLength="100" d="M150 95 Q150 88 157 88 L223 88 Q230 88 230 95 L230 110 Q262 112 262 135 Q262 158 230 160 L230 172 Q230 182 220 182 L160 182 Q150 182 150 172 Z"/>
+        <path class="d-ants" d="M150 95 Q150 88 157 88 L223 88 Q230 88 230 95 L230 110 Q262 112 262 135 Q262 158 230 160 L230 172 Q230 182 220 182 L160 182 Q150 182 150 172 Z"/>
+        <circle class="d-ring" cx="190" cy="135" r="6"/>
+        <circle class="d-click" cx="190" cy="135" r="5"/>
+        <g class="d-tag"><rect x="150" y="66" width="74" height="18" rx="3"/><text x="157" y="79">mug · saved</text></g>
+        <g class="d-corner"><path d="M14 30 V14 H30"/><path d="M346 220 V236 H330"/></g>
+      </svg>
+      <figcaption class="demo-cap mono"><span class="c1">click</span><span class="c2">trace</span><span class="c3">save</span></figcaption>
+    </figure>
+  </div>
+  <div class="home-wrap">
+    <div class="home-head">
+      <h2 id="homeTitle">Your projects</h2>
+      <p>Each project keeps its own photos, classes and labels.</p>
+    </div>
+    <div id="projGrid" aria-live="polite"></div>
+  </div>
+</section>
+
+<dialog id="newProj" aria-labelledby="newProjTitle">
+  <form id="newProjForm" method="dialog">
+    <h2 id="newProjTitle">New project</h2>
+    <p>Give it a name. Next you choose the classes to label, then add photos.</p>
+    <ol class="np-steps" aria-label="Steps">
+      <li class="on">Name</li><li>Classes</li><li>Photos</li>
+    </ol>
+    <input id="newProjInp" maxlength="60" placeholder="e.g. Kitchen objects, Street scenes" autocomplete="off" aria-label="Project name" required>
+    <p class="np-err" id="newProjErr" role="alert"></p>
+    <div class="np-foot">
+      <button type="button" id="newProjCancel">Cancel</button>
+      <button type="submit" class="primary">Create and choose classes</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="exportDlg" aria-labelledby="exportTitle">
+  <form id="exportForm" method="dialog">
+    <div class="ex-head">
+      <h2 id="exportTitle">Export labels</h2>
+      <p id="exportSummary" class="mono"></p>
+    </div>
+    <fieldset class="ex-formats">
+      <legend>Formats <button type="button" class="link" id="exAll">select all</button></legend>
+      <div id="exFormats"></div>
+    </fieldset>
+    <fieldset class="ex-opts">
+      <legend>Options</legend>
+      <label class="check"><input type="checkbox" id="exImages" checked> Include the photos <span class="hint">(YOLO datasets need them to train)</span></label>
+      <label class="check"><input type="checkbox" id="exOnlyLab"> Only photos that have labels</label>
+    </fieldset>
+    <p class="ex-note" id="exNote" role="status"></p>
+    <div class="ex-foot">
+      <button type="button" id="exCancel">Cancel</button>
+      <button type="submit" class="primary" id="exGo">Download zip</button>
+    </div>
+  </form>
+</dialog>
+
+<main class="ws">
+  <aside id="left">
+    <div class="head"><h3>Images</h3><span class="count" id="imgCount"></span></div>
+    <div id="imageList"></div>
+    <div class="dropcard">
+      <b>Add photos</b><span>drop photos or whole folders anywhere</span>
+      <div class="dc-row">
+        <label class="btn"><input type="file" accept="image/*" multiple hidden id="fileInp2">Photos</label>
+        <label class="btn"><input type="file" webkitdirectory directory multiple hidden id="dirInp2">Folder</label>
+      </div>
+    </div>
+  </aside>
+
+  <section id="stage">
+    <canvas id="canvas"></canvas>
+    <div id="empty">
+      <div class="emptybox">
+        <b>No photo open</b>
+        <span>Drop photos or a whole folder here, or use <b>Add photos</b> / <b>Add folder</b> above.</span>
+      </div>
+    </div>
+    <div id="aiBanner" role="status" aria-live="polite"></div>
+  </section>
+
+  <aside id="right">
+    <section class="card">
+      <div class="head"><h3>Classes</h3>
+        <span><span class="count" id="classCount"></span>
+        <button class="link" id="editClassesBtn" title="Choose classes, see what the AI covers">Edit classes</button></span>
+      </div>
+      <div id="classList"></div>
+      <form id="classForm"><input id="classInp" placeholder="Find or add a class   /" autocomplete="off" aria-label="Find or add a class"></form>
+    </section>
+
+    <section class="card ai-card" id="sugCard">
+      <div class="head"><h3>Suggestions</h3><span class="count" id="sugCount"></span></div>
+      <div id="sugOff" class="note">Switch to <b>Assisted</b> to get suggested objects.</div>
+      <div id="sugOn">
+        <label class="field">
+          <span>Detector</span>
+          <select id="detSel" aria-label="Detector"></select>
+        </label>
+        <p class="about" id="detAbout"></p>
+        <label class="field">
+          <span>Show from <b id="confVal" class="mono"></b> confidence</span>
+          <input type="range" id="confRange" min="0.15" max="0.9" step="0.05" value="0.35">
+        </label>
+        <label class="check"><input type="checkbox" id="autoSug" checked> Suggest when a photo opens</label>
+        <div class="row">
+          <button id="suggestBtn" class="ai">Suggest objects<kbd>S</kbd></button>
+          <button id="acceptAllBtn" title="Accept every suggestion shown (Shift+Enter)">Accept all</button>
+        </div>
+        <p class="note" id="sugInfo"></p>
+        <div id="sugIgnored"></div>
+        <div id="sugList"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="head"><h3>Annotations</h3><span class="count" id="annCount"></span></div>
+      <div id="annList"></div>
+    </section>
+
+    <details class="card keys">
+      <summary><h3>Keys</h3></summary>
+      <dl>
+        <dt>B · P · V</dt><dd>box · polygon · select</dd>
+        <dt>A</dt><dd>AI outline (assisted)</dd>
+        <dt>click</dt><dd>outline a new object; the previous one is saved</dd>
+        <dt>Shift+click</dt><dd>add to this outline</dd>
+        <dt>right-click</dt><dd>remove from this outline</dd>
+        <dt>drag</dt><dd>outline the object inside the box</dd>
+        <dt>S</dt><dd>suggest objects</dd>
+        <dt>click a suggestion</dt><dd>accept it (outlined by SAM)</dd>
+        <dt>right-click one</dt><dd>reject it</dd>
+        <dt>Shift+Enter</dt><dd>accept all suggestions</dd>
+        <dt>Enter</dt><dd>save outline · close polygon</dd>
+        <dt>Esc</dt><dd>discard · cancel · deselect</dd>
+        <dt>Backspace</dt><dd>undo last click · delete selected</dd>
+        <dt>1–9, 0 · /</dt><dd>first ten classes · find any class</dd>
+        <dt>Ctrl+Z</dt><dd>undo</dd>
+        <dt>wheel · right-drag</dt><dd>zoom · pan (also Space+drag)</dd>
+        <dt>F · ← →</dt><dd>fit · previous / next photo</dd>
+      </dl>
+    </details>
+  </aside>
+</main>
+
+<dialog id="picker" aria-labelledby="pickerTitle">
+  <div class="pk-head">
+    <div>
+      <h2 id="pickerTitle">Choose what you will label</h2>
+      <p>The AI only ever suggests these classes. You can add more while labelling.</p>
+    </div>
+    <button class="link" id="pickerClose" title="Close (Esc)">Close</button>
+  </div>
+  <form id="pickerForm" class="pk-add">
+    <input id="pickerInp" placeholder="Type any class name, e.g. mirror, scooter, logo" autocomplete="off" aria-label="Class name">
+    <button type="submit">Add</button>
+  </form>
+  <div class="pk-body">
+    <section class="pk-catalogue">
+      <div class="pk-sets"><span>Quick sets</span><span id="pkSets"></span></div>
+      <p class="pk-hint">Common objects: <b>both</b> detectors can suggest these. Any other name you type is suggested by <b>YOLOE</b> only.</p>
+      <div id="pkGroups"></div>
+    </section>
+    <section class="pk-chosen">
+      <h3>Your classes <span class="count" id="pkCount"></span></h3>
+      <div id="pkChosen"></div>
+      <p class="pk-legend"><span class="cov on">11n</span> YOLO11n can suggest it &nbsp;
+        <span class="cov on">E</span> YOLOE can suggest it &nbsp; <span class="cov">11n</span> not covered</p>
+    </section>
+  </div>
+  <div class="pk-foot"><button class="primary" id="pickerDone">Start labelling</button></div>
+</dialog>
+
+<div id="dropZone" aria-hidden="true"><div><b>Drop photos or folders</b><span>every photo inside a folder is added, subfolders too</span></div></div>
+<div id="upProg" role="status" aria-live="polite"><span id="upText"></span><i><b id="upBar"></b></i></div>
+<footer id="status" class="ws"></footer>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

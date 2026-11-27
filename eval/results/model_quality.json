@@ -1,0 +1,50 @@
+{
+ "sam": {
+  "mIoU after 1 click": 0.569,
+  "mIoU after 2 clicks": 0.654,
+  "mIoU after 3 clicks": 0.728,
+  "mIoU after 4 clicks": 0.758,
+  "mIoU after 5 clicks": 0.775,
+  "mIoU from a box": 0.779,
+  "NoC@85 (mean clicks)": 3.45,
+  "reached 85% within 5 clicks": 0.52,
+  "NoC@90 (mean clicks)": 4.093,
+  "reached 90% within 5 clicks": 0.34,
+  "image encode, median s": 0.83,
+  "per click, median s": 0.066
+ },
+ "detectors": {
+  "yolo11n": {
+   "AP": 0.488,
+   "AP50": 0.643,
+   "AP75": 0.524,
+   "AP_small": 0.249,
+   "AP_medium": 0.541,
+   "AP_large": 0.701,
+   "AR100": 0.572,
+   "precision@35%": 0.775,
+   "recall@35%": 0.486,
+   "f1@35%": 0.597,
+   "false alarms@35% per image": 0.97,
+   "median s per image": 0.058
+  },
+  "yoloe": {
+   "AP": 0.441,
+   "AP50": 0.607,
+   "AP75": 0.476,
+   "AP_small": 0.206,
+   "AP_medium": 0.488,
+   "AP_large": 0.644,
+   "AR100": 0.549,
+   "precision@35%": 0.702,
+   "recall@35%": 0.448,
+   "f1@35%": 0.547,
+   "false alarms@35% per image": 1.31,
+   "median s per image": 0.187
+  }
+ },
+ "pipeline": {
+  "yolo11n": 0.7857829398566382,
+  "yoloe": 0.7800610375087369
+ }
+}

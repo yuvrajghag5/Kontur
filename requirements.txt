@@ -1,0 +1,40 @@
+# Kontur (the AI annotator) — Python 3.11, environment .venv311
+# One file for everything: the app, the evaluation and the training notebook.
+#
+#   pip install -r requirements.txt
+#
+# Pinned to the versions installed in .venv311 (checked 25 Nov 2026).
+# The archived satellite mode has its own list in archive/satellite/requirements.txt.
+
+# Web back end (Phase 1)
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic==2.14.1
+python-multipart==0.0.32
+
+# Images and export (Phase 1-2)
+pillow==13.0.0
+numpy==2.4.6
+
+# Models (Phase 3-4): MobileSAM, YOLO11n and YOLOE, all through Ultralytics
+ultralytics==8.4.187
+torch==2.14.1
+torchvision==0.29.1
+opencv-python-headless==5.0.0.93
+# YOLOE's text side: Ultralytics installed these itself on first use (17 Nov);
+# listed so a fresh environment works without that surprise.
+clip @ git+https://github.com/ultralytics/CLIP.git@7ffa84b3bfa40c42ecc1c77147a855e69cb2dd40
+ftfy==6.3.1
+regex==2026.11.15
+
+# Evaluation (Phase 5) and training (Phase 5b, training/ + eval/04 on a GPU).
+# On Linux, torch from PyPI is the CUDA build; on the data lab check
+# torch.cuda.is_available() after installing.
+# The eval/ notebooks run inside VS Code locally
+# (ipykernel is all VS Code needs; no Jupyter server)
+pycocotools==2.0.11
+matplotlib==3.11.2
+scipy==1.17.1
+tqdm==4.70.1
+pandas==3.1.1
+ipykernel==7.4.0

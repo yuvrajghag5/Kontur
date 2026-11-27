@@ -1,0 +1,44 @@
+# Kontur repository: what stays OUT of git.
+
+# The exam report carries personal details (name, matriculation number)
+report/
+
+# The October satellite labeller (Deep Learning course): kept locally as history,
+# not part of Kontur's repository
+/archive/
+
+# Python environment and caches
+.venv311/
+.venv*/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Pretrained weights: re-downloaded automatically by Ultralytics on first start.
+# (mobileclip_blt.ts is 600 MB, over GitHub's 100 MB file limit.)
+/weights/*.pt
+/weights/*.ts
+/*.pt
+/*.ts
+
+# Run-time data: the user's projects (photos, labels, logs)
+/data/
+
+# Evaluation: COCO annotations and images, re-downloaded by notebook 01
+eval/data/
+
+# Training (training/): COCO download, Ultralytics logs, pretrained start weights.
+# training/results/ and training/trained/ ARE committed: they are the evidence.
+training/data/*
+!training/data/.gitkeep
+training/runs/
+training/*.pt
+# raw detections of eval/04 (~800k boxes per model, can exceed GitHub's 100 MB);
+# the metrics, table and charts in the same folder ARE committed
+eval/results/scratch_vs_pretrained/detections_*.json
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/

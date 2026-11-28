@@ -1,0 +1,74 @@
+{
+ "dataset": {
+  "name": "Kvasir-SEG",
+  "images": 100,
+  "polyps": 109,
+  "seed": 2026
+ },
+ "sam": {
+  "mIoU after 1 click": 0.3645405574866821,
+  "mIoU after 2 clicks": 0.6351652863167448,
+  "mIoU after 3 clicks": 0.7179033188180273,
+  "mIoU after 4 clicks": 0.7868047520454161,
+  "mIoU after 5 clicks": 0.8059072058602555,
+  "mIoU from a box": 0.8512879899620057,
+  "NoC@85 (mean clicks)": 3.0091743119266057,
+  "reached 85% within 5 clicks": 0.7431192660550459,
+  "NoC@90 (mean clicks)": 3.669724770642202,
+  "reached 90% within 5 clicks": 0.5321100917431193
+ },
+ "sam_coco": {
+  "mIoU after 1 click": 0.569,
+  "mIoU after 2 clicks": 0.654,
+  "mIoU after 3 clicks": 0.728,
+  "mIoU after 4 clicks": 0.758,
+  "mIoU after 5 clicks": 0.775,
+  "mIoU from a box": 0.779,
+  "NoC@85 (mean clicks)": 3.45,
+  "reached 85% within 5 clicks": 0.52,
+  "NoC@90 (mean clicks)": 4.093,
+  "reached 90% within 5 clicks": 0.34,
+  "image encode, median s": 0.83,
+  "per click, median s": 0.066
+ },
+ "yoloe": {
+  "YOLOE, as in the app (with decoys)": {
+   "AP": 0.02899575671852899,
+   "AP50": 0.04384724186704385,
+   "AP75": 0.03547854785478547,
+   "precision@35%": 0.0,
+   "recall@35%": 0.0,
+   "false alarms per image@35%": 0.0,
+   "median s per image": 0.20035,
+   "dropped as another name (top)": {
+    "person": 20,
+    "orange": 16,
+    "cake": 12,
+    "donut": 7,
+    "apple": 3
+   }
+  },
+  "YOLOE, without decoys": {
+   "AP": 0.23171717490122365,
+   "AP50": 0.33938991354311837,
+   "AP75": 0.2671258302253119,
+   "precision@35%": 0.0,
+   "recall@35%": 0.0,
+   "false alarms per image@35%": 0.0,
+   "median s per image": 0.18325,
+   "dropped as another name (top)": {}
+  }
+ },
+ "yoloe_coco_zero_shot": {
+  "AP": 0.441,
+  "AP50": 0.607,
+  "precision@35%": 0.702,
+  "recall@35%": 0.448
+ },
+ "yolo11n": "cannot suggest 'polyp' (not among the names in its model file)",
+ "pipeline": {
+  "suggester": "YOLOE, without decoys",
+  "n": 0,
+  "outline_iou_mean": null
+ }
+}

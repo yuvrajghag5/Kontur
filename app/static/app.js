@@ -532,7 +532,7 @@ function drawProposal(px) {
 // so moving the slider is instant.
 
 const SUG_FLOOR = 0.15;
-S.det = { key: "yoloe", list: [], conf: 0.35, auto: true };
+S.det = { key: "yoloe", list: [], conf: 0.35, auto: true, guesses: true };
 S.sugs = [];            // [{box, score, class_id, class_name}]
 S.sugMeta = null;       // {model, ms, unsupported}
 S.sugHover = null;
@@ -547,7 +547,9 @@ function alreadyLabelled(s) {
   const b = { points: s.box };
   return S.anns.some(a => a.class_id === s.class_id && boxIoU(a, b) > 0.7);
 }
-const visibleSugs = () => S.sugs.filter(s => s.score >= S.det.conf && !alreadyLabelled(s));
+// A "guess" is one of YOLOE's best boxes for a label no detector was trained on: its
+// score is uncalibrated (tiny), so it is shown by rank, not by the confidence slider.
+const visibleSugs = () => S.sugs.filter(s => (s.guess ? S.det.guesses : s.score >= S.det.conf) && !alreadyLabelled(s));
 
 // The smallest visible suggestion under a point (small boxes inside big ones stay reachable).
 function sugAt([x, y]) {
@@ -598,7 +600,7 @@ async function acceptSug(s, how) {
   let poly = null;
   try { poly = (await api("POST", "/api/ai/segment", { image_id: id, box: s.box })).polygon; } catch (_) {}
   if (S.imageId !== id) { toast("photo changed before the outline came back; suggestion not saved", true); return; }
-  ev("sug_accept", { how, model: S.sugMeta && S.sugMeta.model, cls: s.class_id, score: s.score, outlined: !!poly });
+  ev("sug_accept", { how, model: S.sugMeta && S.sugMeta.model, cls: s.class_id, score: s.score, guess: !!s.guess, outlined: !!poly });
   if (poly) await createAnnotation("polygon", poly, "yolo+sam", s.class_id);
   else await createAnnotation("box", s.box, "yolo", s.class_id);
 }
@@ -606,13 +608,15 @@ async function acceptSug(s, how) {
 function rejectSug(s, how) {
   S.sugs = S.sugs.filter(x => x !== s);
   if (S.sugHover === s) S.sugHover = null;
-  ev("sug_reject", { how, model: S.sugMeta && S.sugMeta.model, cls: s.class_id, score: s.score });
+  ev("sug_reject", { how, model: S.sugMeta && S.sugMeta.model, cls: s.class_id, score: s.score, guess: !!s.guess });
   renderSugs(); draw();
 }
 
 async function acceptAllSugs() {
-  const all = visibleSugs();
-  if (!all.length) { toast("no suggestions to accept"); return; }
+  // Guesses are never accepted in bulk: each one needs a look (the pilot study
+  // showed what accepting without looking does).
+  const all = visibleSugs().filter(s => !s.guess);
+  if (!all.length) { toast(visibleSugs().length ? "only guesses shown: accept them one by one" : "no suggestions to accept"); return; }
   ev("sug_accept_all", { n: all.length });
   for (const s of all) await acceptSug(s, "all");
 }
@@ -621,8 +625,10 @@ function renderSugs() {
   const vis = visibleSugs();
   $("sugCount").textContent = S.sugs.length ? `${vis.length} shown` : "";
   const m = S.sugMeta, hidden = S.sugs.length - vis.length;
+  const nGuess = vis.filter(s => s.guess).length;
   $("sugInfo").innerHTML = !m ? "Press <b>Suggest objects</b>, or turn on suggesting when a photo opens." : [
     `${S.sugs.length} found in ${(m.ms / 1000).toFixed(1)} s`,
+    nGuess ? `${nGuess} low-confidence guess${nGuess > 1 ? "es" : ""} for your own labels: check each one` : "",
     hidden ? `${hidden} hidden (below ${Math.round(S.det.conf * 100)}% or already labelled)` : "",
     m.unsupported.length ? `this detector cannot suggest: ${m.unsupported.map(esc).join(", ")}` : "",
   ].filter(Boolean).join(" · ");
@@ -635,9 +641,9 @@ function renderSugs() {
     `Ignored, not in your classes: ${ignNames.map(n => `${esc(n)}${ign[n] > 1 ? " ×" + ign[n] : ""}`).join(", ")}<br>` +
     ignNames.slice(0, 4).map(n => `<button data-add="${esc(n)}" title="Add '${esc(n)}' as a class">+ ${esc(n)}</button>`).join("");
   $("sugList").innerHTML = vis.map((s, i) => `
-    <div class="sug ${s === S.sugHover ? "hover" : ""}" data-i="${i}">
+    <div class="sug ${s === S.sugHover ? "hover" : ""} ${s.guess ? "guess" : ""}" data-i="${i}">
       <span class="swatch" style="background:${colourOf(s.class_id)}"></span>
-      <span class="grow">${esc(s.class_name)}${s.matched_as ? ` <span class="as">= ${esc(s.matched_as)}</span>` : ""}</span>
+      <span class="grow">${esc(s.class_name)}${s.matched_as ? ` <span class="as">= ${esc(s.matched_as)}</span>` : ""}${s.guess ? ` <span class="gtag" title="A best guess: this label is new to the detector, so its confidence is not meaningful. Check it.">guess</span>` : ""}</span>
       <span class="score">${Math.round(s.score * 100)}%</span>
       <button data-act="ok" title="Accept">Accept</button>
       <button data-act="no" title="Reject">×</button>
@@ -686,14 +692,16 @@ function drawSuggestions(px) {
     const hot = s === S.sugHover;
     shapePath("box", s.box);
     if (hot) { ctx.fillStyle = "rgba(244, 194, 27, 0.18)"; ctx.fill(); }
-    ctx.setLineDash(hot ? [] : [8 * px, 5 * px]);
-    ctx.lineDashOffset = hot ? 0 : antsOffset(px, 13);
-    ctx.lineWidth = (hot ? 3 : 2) * px;
+    // a guess: fine dotted edge and a "?" tag, so it reads as less certain than a suggestion
+    ctx.setLineDash(hot ? [] : s.guess ? [2 * px, 4 * px] : [8 * px, 5 * px]);
+    ctx.lineDashOffset = hot ? 0 : antsOffset(px, s.guess ? 6 : 13);
+    ctx.lineWidth = (hot ? 3 : s.guess ? 1.75 : 2) * px;
     ctx.strokeStyle = "#f4c21b";
     ctx.stroke();
     ctx.setLineDash([]); ctx.lineDashOffset = 0;
     const as = s.matched_as ? ` (${s.matched_as})` : "";
-    tag(s.box[0][0], s.box[0][1], `${s.class_name}${as}  ${Math.round(s.score * 100)}%`, "#f4c21b", "#1b1606", px);
+    const txt = s.guess ? `${s.class_name}?  guess` : `${s.class_name}${as}  ${Math.round(s.score * 100)}%`;
+    tag(s.box[0][0], s.box[0][1], txt, s.guess ? "#2a2410" : "#f4c21b", s.guess ? "#f4c21b" : "#1b1606", px);
   }
 }
 
@@ -914,7 +922,7 @@ function pickClass(id) {
 // which detector can suggest it, so nobody waits for suggestions that cannot come.
 
 S.coverage = {};          // class id -> {yolo11n: COCO name or null, yoloe: true}
-S.catalogue = null;       // names the fast detector knows, read from its model file (shortcuts only)
+S.catalogue = null;       // {group: [names]}: what the fast detector knows (its model file, COCO's groups)
 
 async function refreshCoverage() {
   try { (await api("GET", "/api/classes/coverage")).forEach(c => S.coverage[c.id] = c); } catch (_) {}
@@ -992,10 +1000,13 @@ const chosenFor = name => S.classes.find(c => c.name.toLowerCase() === name.toLo
                                               (S.coverage[c.id] && S.coverage[c.id].yolo11n === name));
 
 function renderPicker() {
-  const names = S.catalogue || [];
-  $("pkShortN").textContent = names.length ? `(${names.length})` : "";
-  $("pkGroups").innerHTML = names.length ? names.map(n =>
-      `<button type="button" class="chip ${chosenFor(n) ? "on" : ""}" data-coco="${esc(n)}">${esc(n)}</button>`).join("")
+  const groups = Object.entries(S.catalogue || {});
+  const n = groups.reduce((a, [, names]) => a + names.length, 0);
+  $("pkShortN").textContent = n ? `(${n})` : "";
+  $("pkGroups").innerHTML = n ? groups.map(([g, names]) => `
+    <div class="pk-group"><h4>${esc(g)}</h4><div class="chips">${names.map(name =>
+      `<button type="button" class="chip ${chosenFor(name) ? "on" : ""}" data-coco="${esc(name)}">${esc(name)}</button>`).join("")}
+    </div></div>`).join("")
     : `<p class="pk-empty">The fast detector is not available, so there are no shortcuts. Typed labels work as usual.</p>`;
   $("pkCount").textContent = S.classes.length || "";
   $("pkChosen").innerHTML = S.classes.length ? S.classes.map(c => `
@@ -1011,7 +1022,7 @@ function renderPicker() {
 
 async function openPicker(why = "button") {
   if (!S.catalogue) {
-    try { S.catalogue = (await api("GET", "/api/ai/catalogue")).names; } catch (_) { S.catalogue = []; }
+    try { S.catalogue = (await api("GET", "/api/ai/catalogue")).groups; } catch (_) { S.catalogue = {}; }
   }
   renderPicker();
   $("pickerDone").textContent = S.images.length ? "Start labelling" : "Next: add photos";
@@ -1214,6 +1225,7 @@ $("confRange").oninput = e => {
 };
 $("confRange").onchange = e => { ev("sug_conf", { conf: S.det.conf }); e.target.blur(); };
 $("autoSug").onchange = e => { S.det.auto = e.target.checked; ev("sug_auto", { on: S.det.auto }); e.target.blur(); };
+$("guessSug").onchange = e => { S.det.guesses = e.target.checked; ev("sug_guesses", { on: S.det.guesses }); e.target.blur(); renderSugs(); draw(); };
 $("suggestBtn").onclick = e => { e.currentTarget.blur(); suggest("button"); };
 $("acceptAllBtn").onclick = e => { e.currentTarget.blur(); acceptAllSugs(); };
 $("confVal").textContent = `${Math.round(S.det.conf * 100)}%`;

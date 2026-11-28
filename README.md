@@ -97,8 +97,12 @@ clean:
     fast) or **YOLOE** (any class name you add, slower).
   - Click a suggestion to accept it: SAM outlines it. Right-click a suggestion
     to reject it.
-  - **S** suggests again; **Shift+Enter** accepts all of them.
+  - **S** suggests again; **Shift+Enter** accepts all of them (never the guesses).
   - The slider sets the lowest confidence shown.
+  - **Best guesses for your own labels:** for a label no detector was trained on
+    (e.g. a medical or product class), YOLOE's confidence means little, but its
+    best boxes are often right. Its 3 best boxes per image are shown dotted and
+    marked "guess", whatever their score; accept or reject each one.
   - If missing, the first start downloads `yolo11n.pt`, `yoloe-11s-seg.pt` and YOLOE's text
     encoder.
 - **Choosing classes:** a new project opens the **class picker** (step 2 of a
@@ -107,7 +111,9 @@ clean:
     the project and are never written in the code. YOLOE can suggest any label
     you type; MobileSAM outlines anything you click.
   - Optional shortcuts: the names the fast detector YOLO11n was trained on, read
-    from its model file. Picking one lets YOLO11n suggest it too.
+    from its model file, grouped by COCO's official categories (a data file,
+    `app/detector_groups.json`, built from COCO's annotations by
+    `app/make_detector_groups.py`). Picking one lets YOLO11n suggest it too.
   - Badges show which detector covers each class: `11n` and `E`.
   - Reopen the picker with **Edit classes**. Double-click a class to rename it.
   - The AI only ever suggests your classes. Objects it sees outside them are
@@ -148,6 +154,11 @@ choose **Select Kernel → `.venv311`** at the top right, then Run All. They nee
    at the top. Set `RUN = "balanced"` or `"pilot"`.
 5. `04_scratch_vs_pretrained.ipynb`: compares the pretrained YOLO11n with the two
    we trained ourselves (next section). Run the training notebook first.
+6. `05_new_domain_kvasir.ipynb`: **does the AI still help on a new kind of image
+   and a new class?** MobileSAM (same click protocol as 02) and YOLOE with the
+   typed label "polyp" on Kvasir-SEG medical images, which no model here was
+   trained on. Downloads 46 MB once; about 5–10 min on CPU. Results in
+   `eval/results/kvasir/`.
 
 Results are written to `eval/results/`.
 

@@ -1,0 +1,10 @@
+{
+ "images with any box shown": 98,
+ "first box shown is a polyp (of all images)": 0.59,
+ "first box shown is a polyp (of images with a box)": 0.6020408163265306,
+ "polyps found among the boxes shown (recall)": 0.7339449541284404,
+ "boxes shown that are polyps (precision)": 0.2846975088967972,
+ "boxes shown per image": 2.81,
+ "accepted correct box -> SAM outline IoU (mean)": 0.840485416954164,
+ "... outline IoU >= 0.75": 0.85
+}

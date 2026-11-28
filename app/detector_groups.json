@@ -1,0 +1,109 @@
+{
+ "source": "COCO 2017 supercategories, from instances_val2017.json",
+ "groups": {
+  "Person": [
+   "person"
+  ],
+  "Vehicle": [
+   "bicycle",
+   "car",
+   "motorcycle",
+   "airplane",
+   "bus",
+   "train",
+   "truck",
+   "boat"
+  ],
+  "Outdoor": [
+   "traffic light",
+   "fire hydrant",
+   "stop sign",
+   "parking meter",
+   "bench"
+  ],
+  "Animal": [
+   "bird",
+   "cat",
+   "dog",
+   "horse",
+   "sheep",
+   "cow",
+   "elephant",
+   "bear",
+   "zebra",
+   "giraffe"
+  ],
+  "Accessory": [
+   "backpack",
+   "umbrella",
+   "handbag",
+   "tie",
+   "suitcase"
+  ],
+  "Sports": [
+   "frisbee",
+   "skis",
+   "snowboard",
+   "sports ball",
+   "kite",
+   "baseball bat",
+   "baseball glove",
+   "skateboard",
+   "surfboard",
+   "tennis racket"
+  ],
+  "Kitchen": [
+   "bottle",
+   "wine glass",
+   "cup",
+   "fork",
+   "knife",
+   "spoon",
+   "bowl"
+  ],
+  "Food": [
+   "banana",
+   "apple",
+   "sandwich",
+   "orange",
+   "broccoli",
+   "carrot",
+   "hot dog",
+   "pizza",
+   "donut",
+   "cake"
+  ],
+  "Furniture": [
+   "chair",
+   "couch",
+   "potted plant",
+   "bed",
+   "dining table",
+   "toilet"
+  ],
+  "Electronic": [
+   "tv",
+   "laptop",
+   "mouse",
+   "remote",
+   "keyboard",
+   "cell phone"
+  ],
+  "Appliance": [
+   "microwave",
+   "oven",
+   "toaster",
+   "sink",
+   "refrigerator"
+  ],
+  "Indoor": [
+   "book",
+   "clock",
+   "vase",
+   "scissors",
+   "teddy bear",
+   "hair drier",
+   "toothbrush"
+  ]
+ }
+}

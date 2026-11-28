@@ -14,6 +14,7 @@ pixels and shows what the server holds.
 from __future__ import annotations
 
 import argparse
+import json
 import threading
 from pathlib import Path
 
@@ -255,8 +256,25 @@ def class_coverage():
 @app.get("/api/ai/catalogue")
 def ai_catalogue():
     """Optional shortcuts for the class picker: the names the fast detector was
-    trained on, read from its weights file (none are written in this code)."""
-    return {"names": sorted(detector.vocabulary(), key=str.lower), "detector": detector.cfg[detector._closed]["label"]}
+    trained on, read from its weights file, grouped the way its training data
+    (COCO) groups them. The grouping is a data file built from COCO's official
+    annotations (make_detector_groups.py); no label is written in this code. A
+    name missing from that file is listed under "Other"."""
+    vocab = detector.vocabulary()
+    known: dict[str, list[str]] = {}
+    f = HERE / "detector_groups.json"
+    if f.exists():
+        known = json.loads(f.read_text(encoding="utf-8")).get("groups", {})
+    left = set(vocab)
+    groups: dict[str, list[str]] = {}
+    for g, names in known.items():
+        members = [n for n in names if n in left]
+        if members:
+            groups[g] = members
+            left -= set(members)
+    if left:
+        groups["Other"] = sorted(left, key=str.lower)
+    return {"groups": groups, "detector": detector.cfg[detector._closed]["label"]}
 
 
 # ---------------------------------------------------------------- images
@@ -441,7 +459,8 @@ def ai_detect(q: Detect):
     for s in r["suggestions"]:
         s["class_id"] = by_name[s["class_name"]]
     log.server_event("ai_detect", image=q.image_id, model=q.model, conf=q.conf, ms=r["ms"],
-                     n=len(r["suggestions"]), unsupported=r["unsupported"], n_ignored=len(r["ignored"]),
+                     n=len(r["suggestions"]), n_guesses=sum(1 for s in r["suggestions"] if s.get("guess")),
+                     unsupported=r["unsupported"], n_ignored=len(r["ignored"]),
                      wait_ms=r.get("wait_ms"))
     return {**r, "model": q.model}
 

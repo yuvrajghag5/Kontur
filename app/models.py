@@ -223,6 +223,10 @@ def match_name(name: str, vocabulary: list[str]) -> str | None:
     return None
 
 
+GUESSES = 3            # best guesses offered per custom label and image
+GUESS_FLOOR = 0.001    # how low YOLOE looks for them
+
+
 class Detector:
     """Loads each detector once, on first use or at start-up, and runs it."""
 
@@ -298,11 +302,20 @@ class Detector:
         return {"load_ms": self.load_ms[key], "warm_ms": round((time.perf_counter() - t0) * 1000, 1)}
 
     def detect(self, key: str, image, class_names: list[str], conf: float = 0.35,
-               max_det: int = 60, use_decoys: bool = True) -> dict:
+               max_det: int = 60, use_decoys: bool | str = "auto", guesses: int = GUESSES) -> dict:
         """Boxes for an image (a path, or an array for the warm-up), each with
         one of `class_names`. Returns the suggestions, the time taken, which of
         the user's classes this detector cannot suggest at all, and the objects
-        it saw that are outside the user's classes ("ignored")."""
+        it saw that are outside the user's classes ("ignored").
+
+        use_decoys: "auto" (the app) = decoys only if at least one label is a name
+        the closed-set detector knows; True / False force them on / off.
+        guesses: for each *custom* label (one no detector was trained on), also
+        return its best `guesses` boxes below `conf`, flagged "guess"; 0 = none.
+        Measured on Kvasir-SEG (eval/05, 28 Nov): for an unfamiliar label YOLOE's
+        scores stay tiny (all < 0.05 for "polyp") although its top box per image
+        is right 74% of the time, so a fixed cut hides exactly what would help."""
+        guess_for: set[str] = set()
         with _Turn() as turn:
             model = self._model(key)
             # index -> (user class name or None, detector's own name)
@@ -315,7 +328,16 @@ class Detector:
                 # user's few words, so an animal can come back named as a piece
                 # of furniture. With its own name on offer, it is named correctly
                 # and dropped (listed as "ignored").
+                # But on an unfamiliar domain they backfire (eval/05: polyps were
+                # called "person", "orange", "cake" and dropped), so by default they
+                # are used only when some label is a familiar name.
+                vocab = self.vocabulary()
+                custom = [n for n in names if not match_name(n, vocab)]
+                if use_decoys == "auto":
+                    use_decoys = len(custom) < len(names)
                 decoys = self.decoys(names) if use_decoys else []
+                if guesses > 0:
+                    guess_for = set(custom)
                 prompts = names + decoys
                 if tuple(prompts) != self._yoloe_names:
                     # Turning names into text embeddings is the slow part of a
@@ -344,8 +366,10 @@ class Detector:
                 agnostic = False
             src = str(image) if isinstance(image, Path) else image
             t0 = time.perf_counter()
-            r = model.predict(src, conf=conf, max_det=max_det, verbose=False, imgsz=640,
-                              agnostic_nms=agnostic)[0]
+            # custom labels: look much lower, so their best guesses can be offered
+            pconf = min(conf, GUESS_FLOOR) if guess_for else conf
+            r = model.predict(src, conf=pconf, max_det=max(max_det, 100) if guess_for else max_det,
+                              verbose=False, imgsz=640, agnostic_nms=agnostic)[0]
             ms = round((time.perf_counter() - t0) * 1000, 1)
 
         out, ignored = [], []
@@ -364,7 +388,14 @@ class Detector:
                 s["matched_as"] = own_name          # the detector's own spelling of the user's label
             out.append(s)
         out.sort(key=lambda s: -s["score"])
-        return {"suggestions": out, "ms": ms, "unsupported": unsupported, "ignored": ignored,
+        shown = [s for s in out if s["score"] >= conf]
+        for name in guess_for:                      # best guesses for each custom label
+            low = [s for s in out if s["class_name"] == name and s["score"] < conf]
+            for s in low[:guesses]:
+                s["guess"] = True
+                shown.append(s)
+        ignored = [g for g in ignored if g["score"] >= conf]
+        return {"suggestions": shown, "ms": ms, "unsupported": unsupported, "ignored": ignored,
                 "wait_ms": turn.wait_ms}
 
 

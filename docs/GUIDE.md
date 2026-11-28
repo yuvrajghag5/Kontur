@@ -115,9 +115,18 @@ proposes this".
 - If the detector sees something that is *not* one of your classes, it is not
   suggested, but the panel says so ("Ignored: dog ×2"). One click adds it as a
   class.
-- YOLOE is also given common object names you did *not* choose, so a dog is
-  recognised as a dog and left out, instead of being forced into your nearest
-  class ("chair").
+- When at least one of your labels is a name the fast detector knows, YOLOE is
+  also given the other names it knows as "decoys", so an everyday object outside
+  your labels gets its own name and is left out instead of being forced into your
+  nearest label. When **all** your labels are new (a medical or product project),
+  decoys are switched off: on such images they made YOLOE call real targets by
+  everyday names and drop them (measured in notebook 05).
+- **Best guesses.** For a label no detector was trained on, YOLOE's confidence is
+  low even when it is right (below 5% for "polyp" in notebook 05, where its top box
+  was a polyp 74% of the time). So for such labels Kontur shows its **3 best boxes
+  per image**, dotted and marked "guess", regardless of the slider. **Accept all
+  never accepts guesses**: check each one. Switch them off with "Best guesses for
+  your own labels" in the Suggestions panel.
 
 ### Which detector?
 

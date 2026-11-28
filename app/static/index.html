@@ -178,6 +178,7 @@
           <input type="range" id="confRange" min="0.15" max="0.9" step="0.05" value="0.35">
         </label>
         <label class="check"><input type="checkbox" id="autoSug" checked> Suggest when a photo opens</label>
+        <label class="check" title="For labels no detector was trained on, YOLOE's confidence is not meaningful, but its best boxes often are right. They are shown dotted, marked 'guess', and are never accepted by Accept all."><input type="checkbox" id="guessSug" checked> Best guesses for your own labels</label>
         <div class="row">
           <button id="suggestBtn" class="ai">Suggest objects<kbd>S</kbd></button>
           <button id="acceptAllBtn" title="Accept every suggestion shown (Shift+Enter)">Accept all</button>
@@ -237,9 +238,9 @@
         <b>MobileSAM</b> outlines anything you click, whatever its label.</p>
       <details id="pkShortcuts">
         <summary>Optional shortcuts: names the fast detector <b>YOLO11n</b> already knows <span class="count" id="pkShortN"></span></summary>
-        <p class="pk-hint">Read from the detector's own model file. Click one to add it as a label; YOLO11n can
-          then suggest it too, and faster.</p>
-        <div class="chips" id="pkGroups"></div>
+        <p class="pk-hint">Read from the detector's own model file, in the groups of the data it was trained on
+          (COCO). Click one to add it as a label; YOLO11n can then suggest it too, and faster.</p>
+        <div id="pkGroups"></div>
       </details>
     </section>
     <section class="pk-chosen">

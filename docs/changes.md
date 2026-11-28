@@ -1741,6 +1741,151 @@ picking it from the shortcuts, enables YOLO11n.
 **(b)** Notebook 02 passes the 80 exact COCO names: each matches exactly, and YOLOE
 gets no decoys (all 80 are taken), so the measured detectors are unchanged.
 
+**(c) The shortcut chips lost their groups** (Yuvraj, after testing: "keep the same
+layout, categories like kitchen, furniture, food"). The model file holds names
+only, and typing groups into the code would re-introduce label lists. Solved with
+**COCO's own grouping**: every COCO category has a `supercategory` in the official
+annotation file. `app/make_detector_groups.py` copies it into a data file,
+`app/detector_groups.json` (12 groups: Person, Vehicle, Outdoor, Animal, Accessory,
+Sports, Kitchen, Food, Furniture, Electronic, Appliance, Indoor; 80 names). The
+server reads it at run time, keeps only names the detector really has, and lists
+anything else under "Other". The code still contains no label name (re-checked:
+0 hits); the grouping is COCO's, not ours.
+
+---
+
+# Phase 5c — Does the AI help on a new domain? (28 November 2026)
+
+*Written 28 Nov; compiles, **not yet run**. Yuvraj runs it (CPU, ~5–10 min).*
+
+## 1. Initial build
+
+The professor's scope note asks that the AI *"still help when it sees new image types
+and new classes"*. Every earlier measurement was on COCO. `eval/05_new_domain_kvasir.ipynb`
+measures the same AI, **through the app's own code**, on **Kvasir-SEG** [Jha et al.,
+MMM 2020]: colonoscopy images with expert polyp masks, a domain and a class none of
+Kontur's models was trained on (46 MB, research/education use with citation).
+
+- **100 images** (seed 2026); each separate mask region ≥ 16×16 px is one object.
+- **A. MobileSAM:** notebook 02's protocol unchanged (`E.simulate_clicks`, NoC@85/90,
+  box prompt); results side by side with COCO, plus one chart with both curves.
+- **B. YOLOE with the typed label "polyp"** (zero-shot): COCO box AP, and P/R at the
+  app's 35%; run **with the app's decoys and without** them, and listing what YOLOE
+  called polyps instead (the names they were dropped under). YOLO11n's coverage of
+  "polyp" is recorded: it cannot suggest it.
+- **C. YOLOE → SAM:** outline IoU when a correct suggestion is accepted.
+- Results: `eval/results/kvasir/` (`kvasir_quality.json`, `sam_clicks.csv`,
+  `sam_iou_vs_clicks.png`, detection files).
+
+## 2. Issues faced
+
+**(a)** Kvasir's masks are JPEGs (compression noise around edges). **(b)** Some images
+show more than one polyp. **(c)** On 25 Nov a local filter blocked `.zip` downloads from
+Python.
+
+## 3. How it was solved
+
+**(a)** Thresholded at half brightness; regions under 16×16 px skipped. **(b)** Each
+connected region is its own object, as COCO counts instances. **(c)** The shared
+`E.download` already says where to save the file from a browser; the notebook then
+uses it as it is.
+
+**(d) Run 28 Nov (Yuvraj, laptop CPU).** Python's download failed this time with
+`CERTIFICATE_VERIFY_FAILED` (certificate check, not the zip filter); the zip was saved
+from the browser. Certificate checking was deliberately left on.
+
+## 4. Results (28 November 2026)
+
+100 Kvasir-SEG images, 109 polyps.
+
+**MobileSAM generalises, after one correction click:**
+
+| | 1 click | 2 | 3 | 5 | box | NoC@85 | reach 85% in 5 |
+|---|---|---|---|---|---|---|---|
+| COCO photos (02) | 0.57 | 0.65 | 0.73 | 0.78 | 0.78 | 3.45 | 52% |
+| **Kvasir polyps** | **0.36** | **0.64** | **0.72** | **0.81** | **0.85** | **3.01** | **74%** |
+
+- The first click is bimodal: half the polyps get IoU < 0.2 (SAM picks the wrong
+  extent of a soft-edged object), 28% get ≥ 0.7. One more click fixes it: median IoU
+  0.19 → 0.70 (2 clicks) → 0.88 (5 clicks); **from a box, median 0.90**.
+- From 2 clicks on, polyps are outlined **as well as or better than COCO objects**,
+  and more reach 85% IoU. Speed unchanged: encode 0.8 s, 0.06 s per click.
+- Practical advice for new domains (GUIDE/report): drag a box, or expect a second click.
+
+**YOLOE with the typed label "polyp": it knows *where*, but is not confident:**
+
+- Without decoys: AP 0.23 (AP50 0.34). With the app's decoys: AP 0.03.
+- **Every score is tiny:** highest 0.046 (without decoys). So at the app's 35% (or any
+  threshold down to 5%) **nothing is shown**: precision/recall 0 at 35%, and part C
+  (YOLOE→SAM) had no accepted suggestions to test.
+- **But the ranking is useful:** in 43 of the 58 images where YOLOE returned any box,
+  **its top box is a polyp** (74%). Absolute confidence is meaningless on an unfamiliar
+  domain; the relative order is not.
+- **Decoys hurt on a new domain:** YOLOE called the polyps "person" (20), "orange" (16),
+  "cake" (12), "donut" (7), "apple" (3), and the decoy rule dropped them. Correct top
+  boxes fall from 43 to 6 images.
+- YOLO11n cannot suggest "polyp" at all.
+
+**Design implications → built the same day (Phase 4h, below).**
+
+---
+
+# Phase 4h — New-domain fixes: automatic decoys, best guesses (28 November 2026)
+
+*Written 28 Nov after eval/05's results; compiles, **not yet run**. Yuvraj runs it.*
+
+## 1. Initial build
+
+Both fixes follow directly from Phase 5c §4.
+
+- **Decoys "auto"** (`Detector.detect(use_decoys="auto")`, the app's default): YOLOE gets
+  decoys only if at least one of the project's labels is a name the fast detector
+  knows. A project with only new labels (e.g. "polyp") gets none. `True`/`False`
+  still force them, which eval/05 part B uses to keep its old numbers.
+- **Best guesses** (`guesses=3`): for each *custom* label, YOLOE looks down to 0.1%
+  confidence and returns its 3 best boxes below the normal cut, flagged `guess`.
+  Familiar labels are unchanged.
+- **UI:** guesses are drawn with a fine dotted edge and a `polyp?  guess` tag, marked
+  `guess` in the list, shown regardless of the confidence slider, and **never
+  accepted by Accept all** (the pilot study's automation-bias lesson). A checkbox
+  "Best guesses for your own labels" (on by default) hides them. The panel says
+  "N low-confidence guesses for your own labels: check each one". `sug_accept` and
+  `sug_reject` log `guess`; the server logs `n_guesses`.
+- **eval/05, part D:** runs YOLOE exactly as the app now does (asks at 15%, shows
+  from 35% plus guesses) and scores what the user sees: is the first box a polyp,
+  recall and precision of the shown boxes, and SAM's outline IoU when a correct box
+  is accepted. Part B is pinned to `guesses=0` and keeps measuring the old behaviour.
+
+## 2. Issues faced
+
+**(a)** Changing `detect()` could silently change the COCO measurements of notebook 02.
+
+## 3. How it was solved
+
+**(a)** Guesses and the decoy switch only act on *custom* labels. With notebook 02's 80
+COCO names, none is custom (checked against the COCO annotation file: 0 of 80), so no
+guesses appear and the decoys are the same as before (empty); the COCO results stay
+valid without a re-run.
+
+## 4. Results: eval/05 part D (28 November 2026)
+
+Re-run after a kernel restart (the first attempt still had the old `app.models` loaded).
+Parts A and B reproduced exactly. What the user sees on 100 Kvasir images, label "polyp":
+
+| | App before 28 Nov | **App now** |
+|---|---|---|
+| Images with any suggestion shown | 0 | **98** |
+| First box shown is a polyp | – | **59%** of images |
+| Polyps found among the boxes shown | 0% | **73%** |
+| Boxes shown that are polyps | – | 28% (2.8 boxes per image) |
+| Accepted correct box → SAM outline IoU | – | **0.84** (85% of outlines ≥ 0.75) |
+
+- Typically one of the ~3 dotted guesses is the polyp; accepting it gives an outline as
+  good as a hand-drawn box prompt (0.85, part A). Wrong guesses need no action; they can
+  simply be left.
+- Precision is low by design (3 guesses, shown regardless of score); this is why guesses
+  look different and are excluded from Accept all.
+
 ---
 
 # Phase 6 — Report and submission

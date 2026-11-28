@@ -1697,6 +1697,52 @@ now **two notebooks**, and all evaluation lives in `eval/`:
 
 ---
 
+# Phase 4g — No hard-coded labels (28 November 2026)
+
+*Written 28 Nov; syntax-checked, **not yet run**. Yuvraj runs it.*
+
+## 1. Initial build
+
+Prompted by the professor's email (28 Nov): the tool must be general-purpose;
+*"labels must not be hard-coded in the source code"*; the AI must help on new image
+types and classes. Per-project, user-typed labels already existed, but the source
+contained label lists: the 80 COCO names grouped in `COCO_GROUPS` and a synonym
+table in `app/models.py`, and three quick sets in `app/static/app.js`. They were
+only picker shortcuts and a name-matching aid, but they read as "built around COCO".
+
+- **Removed** `COCO_GROUPS`, `COCO_NAMES`, `COCO_SYNONYMS`, `coco_match`,
+  `yoloe_decoys`, `coverage` and the quick sets.
+- **The detector's names are read from its weights at run time:**
+  `Detector.vocabulary()` returns YOLO11n's `model.names`. It is used for the picker
+  shortcuts, the coverage badges and the YOLOE decoys.
+- **Matching a user's label to a detector name** (`match_name`): the same word,
+  ignoring case, spacing, `_`/`-`, and a plural `s`/`es`. Nothing fuzzier; the UI
+  shows every match.
+- **Class picker:** leads with "Your labels for this project: type the labels you
+  need, any names, for any kind of image". The detector's names are a collapsed,
+  optional *shortcuts* section (alphabetical; no groups, no quick sets).
+- Check: the 80 COCO names, read from `instances_val2017.json`, searched as quoted
+  strings in every `app/` file: **0 hits** (comments reworded too).
+
+## 2. Issues faced
+
+**(a) The synonym table was the only way "table" reached YOLO11n's "dining table".**
+Without a hard-coded table that mapping is gone.
+
+**(b) The evaluation must measure the same detectors as before.**
+
+## 3. How it was solved
+
+**(a)** Accepted as the price of a general tool: a label YOLO11n does not know by
+the same name is still suggested by YOLOE (which reads names), and the badge shows
+honestly that YOLO11n does not cover it. Typing the detector's own name, or
+picking it from the shortcuts, enables YOLO11n.
+
+**(b)** Notebook 02 passes the 80 exact COCO names: each matches exactly, and YOLOE
+gets no decoys (all 80 are taken), so the measured detectors are unchanged.
+
+---
+
 # Phase 6 — Report and submission
 
 ## 1. Initial build

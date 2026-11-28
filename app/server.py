@@ -25,8 +25,7 @@ from pydantic import BaseModel
 
 from . import export
 from .events import EventLog
-from .models import (COCO_GROUPS, SAM_WEIGHTS, ClickSegmenter, DetectError, Detector, SamError,
-                     coverage)
+from .models import SAM_WEIGHTS, ClickSegmenter, DetectError, Detector, SamError
 from .projects import Projects
 from .store import Store, StoreError
 
@@ -34,8 +33,8 @@ HERE = Path(__file__).parent
 DEFAULT_DATA = HERE.parent / "data"
 
 # A new project starts with NO classes: the user picks them first (the class
-# picker opens by itself). Starter classes used to be seeded here (person, car,
-# dog, cat) and made the AI suggest dogs to users who never asked for dogs.
+# picker opens by itself). Four starter classes used to be seeded here; they made
+# the AI suggest objects the user never asked for. No label names live in the code.
 
 app = FastAPI(title="Kontur")
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
@@ -250,13 +249,14 @@ def class_coverage():
     """Which detector can suggest each class, and under which of its own names:
     shown as badges, so the user knows BEFORE labelling where the AI will help."""
     classes = store.classes()
-    return [{"id": c["id"], **cov} for c, cov in zip(classes, coverage([c["name"] for c in classes]))]
+    return [{"id": c["id"], **cov} for c, cov in zip(classes, detector.coverage([c["name"] for c in classes]))]
 
 
 @app.get("/api/ai/catalogue")
 def ai_catalogue():
-    """The 80 classes YOLO11n knows, grouped, for the class picker."""
-    return {"groups": COCO_GROUPS}
+    """Optional shortcuts for the class picker: the names the fast detector was
+    trained on, read from its weights file (none are written in this code)."""
+    return {"names": sorted(detector.vocabulary(), key=str.lower), "detector": detector.cfg[detector._closed]["label"]}
 
 
 # ---------------------------------------------------------------- images

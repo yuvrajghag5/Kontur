@@ -914,7 +914,7 @@ function pickClass(id) {
 // which detector can suggest it, so nobody waits for suggestions that cannot come.
 
 S.coverage = {};          // class id -> {yolo11n: COCO name or null, yoloe: true}
-S.catalogue = null;       // {group: [COCO names]}
+S.catalogue = null;       // names the fast detector knows, read from its model file (shortcuts only)
 
 async function refreshCoverage() {
   try { (await api("GET", "/api/classes/coverage")).forEach(c => S.coverage[c.id] = c); } catch (_) {}
@@ -932,7 +932,8 @@ function covBadges(id) {
          `<span class="cov on" title="YOLOE can suggest this: it reads class names (open vocabulary)">E</span>`;
 }
 
-// "table = dining table": shown wherever YOLO11n knows a class under another name.
+// "<your label> = <detector's name>": shown wherever YOLO11n knows a label under another
+// spelling (a plural, other case or spacing).
 function asNote(id) {
   const c = S.coverage[id];
   return c && c.yolo11n && c.yolo11n !== nameOf(id).toLowerCase() ? ` <span class="as">= ${esc(c.yolo11n)}</span>` : "";
@@ -986,26 +987,16 @@ async function classesChanged() {
 
 // ---- the picker dialog
 
-const chosenFor = coco => S.classes.find(c => c.name.toLowerCase() === coco ||
-                                              (S.coverage[c.id] && S.coverage[c.id].yolo11n === coco));
-
-function pickerSets() {
-  const cat = S.catalogue || {};
-  return {
-    "Vehicles": ["person", "bicycle", "car", "motorcycle", "bus", "truck"],
-    "Indoor": ["chair", "couch", "bed", "dining table", "tv", "laptop", "potted plant", "vase", "book", "clock"],
-    "Animals": cat["Animals"] || [],
-    "All 80": Object.values(cat).flat(),
-  };
-}
+// The user's label that already stands for one of the detector's names, if any.
+const chosenFor = name => S.classes.find(c => c.name.toLowerCase() === name.toLowerCase() ||
+                                              (S.coverage[c.id] && S.coverage[c.id].yolo11n === name));
 
 function renderPicker() {
-  $("pkSets").innerHTML = Object.keys(pickerSets())
-    .map(k => `<button type="button" data-set="${esc(k)}">${esc(k)}</button>`).join("");
-  $("pkGroups").innerHTML = Object.entries(S.catalogue || {}).map(([g, names]) => `
-    <div class="pk-group"><h4>${esc(g)}</h4><div class="chips">${names.map(n =>
-      `<button type="button" class="chip ${chosenFor(n) ? "on" : ""}" data-coco="${esc(n)}">${esc(n)}</button>`).join("")}
-    </div></div>`).join("");
+  const names = S.catalogue || [];
+  $("pkShortN").textContent = names.length ? `(${names.length})` : "";
+  $("pkGroups").innerHTML = names.length ? names.map(n =>
+      `<button type="button" class="chip ${chosenFor(n) ? "on" : ""}" data-coco="${esc(n)}">${esc(n)}</button>`).join("")
+    : `<p class="pk-empty">The fast detector is not available, so there are no shortcuts. Typed labels work as usual.</p>`;
   $("pkCount").textContent = S.classes.length || "";
   $("pkChosen").innerHTML = S.classes.length ? S.classes.map(c => `
     <div class="item" data-id="${c.id}">
@@ -1015,12 +1006,12 @@ function renderPicker() {
       <span class="act" data-ren="${c.id}" title="Rename">✎</span>
       <span class="x" data-del="${c.id}" title="Remove (only if no label uses it)">×</span>
     </div>`).join("")
-    : `<div class="pk-empty">No classes yet. Tick common objects on the left, or type your own above.</div>`;
+    : `<div class="pk-empty">No labels yet. Type your first label above.</div>`;
 }
 
 async function openPicker(why = "button") {
   if (!S.catalogue) {
-    try { S.catalogue = (await api("GET", "/api/ai/catalogue")).groups; } catch (_) { S.catalogue = {}; }
+    try { S.catalogue = (await api("GET", "/api/ai/catalogue")).names; } catch (_) { S.catalogue = []; }
   }
   renderPicker();
   $("pickerDone").textContent = S.images.length ? "Start labelling" : "Next: add photos";
@@ -1032,7 +1023,7 @@ async function openPicker(why = "button") {
 $("editClassesBtn").onclick = e => { e.currentTarget.blur(); openPicker("button"); };
 $("pickerClose").onclick = () => $("picker").close();
 $("pickerDone").onclick = () => {
-  if (!S.classes.length) { toast("choose at least one class first", true); return; }
+  if (!S.classes.length) { toast("add at least one label first", true); return; }
   $("picker").close();
   // step 3 of a new project: a project with no photos asks for them at once
   // (this click is the user gesture a file chooser needs)
@@ -1051,14 +1042,6 @@ $("pkGroups").addEventListener("click", async e => {
     const have = chosenFor(coco);
     if (have) await removeClass(have.id); else await addClass(coco, "picker");
   } catch (err) { toast(err.message, true); }
-  renderPicker();
-});
-
-$("pkSets").addEventListener("click", async e => {
-  const set = pickerSets()[e.target.dataset.set];
-  if (!set) return;
-  ev("picker_set", { set: e.target.dataset.set });
-  for (const n of set) if (!chosenFor(n)) { try { await addClass(n, "picker_set"); } catch (err) { toast(err.message, true); } }
   renderPicker();
 });
 

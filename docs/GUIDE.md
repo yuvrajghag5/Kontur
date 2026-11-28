@@ -108,8 +108,10 @@ proposes this".
 - Each class shows two small badges:
   - **11n**, lit, when YOLO11n can suggest it;
   - **E** for YOLOE, which can suggest any name.
-- If YOLO11n knows your class under a different name, you see it, e.g.
-  "table = dining table".
+- If YOLO11n knows your label under a slightly different spelling (other case,
+  spacing, or a plural), you see its name next to yours.
+- No label list is built into Kontur. The only names offered as shortcuts are the
+  ones YOLO11n was trained on, read from its model file.
 - If the detector sees something that is *not* one of your classes, it is not
   suggested, but the panel says so ("Ignored: dog ×2"). One click adds it as a
   class.

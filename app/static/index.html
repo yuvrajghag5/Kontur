@@ -221,25 +221,31 @@
 <dialog id="picker" aria-labelledby="pickerTitle">
   <div class="pk-head">
     <div>
-      <h2 id="pickerTitle">Choose what you will label</h2>
-      <p>The AI only ever suggests these classes. You can add more while labelling.</p>
+      <h2 id="pickerTitle">Your labels for this project</h2>
+      <p>Type the labels you need: any names, for any kind of image. The AI only ever suggests these,
+        and you can add, rename or remove labels at any time while labelling.</p>
     </div>
     <button class="link" id="pickerClose" title="Close (Esc)">Close</button>
   </div>
   <form id="pickerForm" class="pk-add">
-    <input id="pickerInp" placeholder="Type any class name, e.g. mirror, scooter, logo" autocomplete="off" aria-label="Class name">
+    <input id="pickerInp" placeholder="Type a label and press Enter" autocomplete="off" aria-label="New label">
     <button type="submit">Add</button>
   </form>
   <div class="pk-body">
     <section class="pk-catalogue">
-      <div class="pk-sets"><span>Quick sets</span><span id="pkSets"></span></div>
-      <p class="pk-hint">Common objects: <b>both</b> detectors can suggest these. Any other name you type is suggested by <b>YOLOE</b> only.</p>
-      <div id="pkGroups"></div>
+      <p class="pk-hint">Every label you type can be suggested by <b>YOLOE</b>, which reads label names.
+        <b>MobileSAM</b> outlines anything you click, whatever its label.</p>
+      <details id="pkShortcuts">
+        <summary>Optional shortcuts: names the fast detector <b>YOLO11n</b> already knows <span class="count" id="pkShortN"></span></summary>
+        <p class="pk-hint">Read from the detector's own model file. Click one to add it as a label; YOLO11n can
+          then suggest it too, and faster.</p>
+        <div class="chips" id="pkGroups"></div>
+      </details>
     </section>
     <section class="pk-chosen">
       <h3>Your classes <span class="count" id="pkCount"></span></h3>
       <div id="pkChosen"></div>
-      <p class="pk-legend"><span class="cov on">11n</span> YOLO11n can suggest it &nbsp;
+      <p class="pk-legend"><span class="cov on">11n</span> YOLO11n can suggest it too &nbsp;
         <span class="cov on">E</span> YOLOE can suggest it &nbsp; <span class="cov">11n</span> not covered</p>
     </section>
   </div>

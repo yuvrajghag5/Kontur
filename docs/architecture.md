@@ -100,7 +100,7 @@ pixel ratio is applied only when drawing, never in the mapping.
 | GET | `/api/state` | The open project, its classes and images, with annotation counts |
 | POST / DELETE / PUT | `/api/classes`, `/api/classes/{id}` | Add a class; delete an unused class; rename |
 | GET | `/api/classes/coverage` | Per class: the COCO name YOLO11n knows it as (or none); YOLOE always |
-| GET | `/api/ai/catalogue` | The 80 COCO classes in groups, for the class picker |
+| GET | `/api/ai/catalogue` | Optional picker shortcuts: the names YOLO11n was trained on, read from its weights at run time (no label list in the code) |
 | POST | `/api/images` | Upload one or more images (multipart `files`) |
 | GET / DELETE | `/api/images/{id}/file`, `/api/images/{id}` | Image file; delete an image with its labels |
 | GET | `/api/images/{id}/annotations` | Annotations of one image |

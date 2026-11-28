@@ -201,57 +201,26 @@ DETECTORS = {
     },
 }
 
-# Your class name -> COCO class name, for YOLO11n. Exact matches (ignoring case)
-# need no entry; these cover common different spellings of the same thing.
-COCO_SYNONYMS = {
-    "table": "dining table", "desk": "dining table", "sofa": "couch",
-    "motorbike": "motorcycle", "bike": "bicycle", "phone": "cell phone",
-    "mobile": "cell phone", "smartphone": "cell phone", "plant": "potted plant",
-    "television": "tv", "monitor": "tv", "fridge": "refrigerator", "ball": "sports ball",
-    "people": "person", "man": "person", "woman": "person", "child": "person",
-    "glass": "wine glass", "aeroplane": "airplane", "plane": "airplane", "lorry": "truck",
-    "puppy": "dog", "kitten": "cat", "doughnut": "donut", "hairdryer": "hair drier",
-}
+# No label names live in this code. A closed-set detector (YOLO11n) brings its
+# own list of class names inside its weights file; Kontur reads it from there at
+# run time (Detector.vocabulary). The user's labels are whatever they type, saved
+# per project.
+
+def norm_label(name: str) -> str:
+    """Compare labels loosely: case, extra spaces, "_" and "-" do not matter."""
+    return " ".join(name.replace("_", " ").replace("-", " ").lower().split())
 
 
-# The 80 COCO classes (the exact names YOLO11n uses), grouped for the class
-# picker the way COCO itself groups them into supercategories.
-COCO_GROUPS = {
-    "People & vehicles": ["person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat"],
-    "Street": ["traffic light", "fire hydrant", "stop sign", "parking meter", "bench"],
-    "Animals": ["bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe"],
-    "Accessories": ["backpack", "umbrella", "handbag", "tie", "suitcase"],
-    "Sport": ["frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat", "baseball glove",
-              "skateboard", "surfboard", "tennis racket"],
-    "Kitchen": ["bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl"],
-    "Food": ["banana", "apple", "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake"],
-    "Furniture": ["chair", "couch", "potted plant", "bed", "dining table", "toilet"],
-    "Electronics": ["tv", "laptop", "mouse", "remote", "keyboard", "cell phone"],
-    "Household": ["microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
-                  "teddy bear", "hair drier", "toothbrush"],
-}
-COCO_NAMES = [n for group in COCO_GROUPS.values() for n in group]
-
-
-def coco_match(name: str) -> str | None:
-    """The COCO class a user's class name refers to, if any: an exact match
-    (ignoring case), else a common synonym ("bike" -> "bicycle")."""
-    n = name.strip().lower()
-    if n in COCO_NAMES:
-        return n
-    return COCO_SYNONYMS.get(n)
-
-
-def yoloe_decoys(user_names: list[str]) -> list[str]:
-    """COCO names the user has not chosen (directly or through a synonym), used
-    as extra YOLOE prompts so out-of-list objects have a name of their own."""
-    taken = {n.strip().lower() for n in user_names} | {coco_match(n) for n in user_names}
-    return [n for n in COCO_NAMES if n not in taken]
-
-
-def coverage(class_names: list[str]) -> list[dict]:
-    """What each detector can do for each of the user's classes, for the UI."""
-    return [{"name": n, "yolo11n": coco_match(n), "yoloe": True} for n in class_names]
+def match_name(name: str, vocabulary: list[str]) -> str | None:
+    """The detector's own name for a user's label, if it has one: the same word,
+    ignoring case and spacing, or its singular (a trailing "s" or "es" removed).
+    Nothing fuzzier, so a match is never a surprise; the UI shows every match."""
+    own = {norm_label(v): v for v in vocabulary}
+    n = norm_label(name)
+    for cand in (n, n[:-1] if n.endswith("s") else None, n[:-2] if n.endswith("es") else None):
+        if cand and cand in own:
+            return own[cand]
+    return None
 
 
 class Detector:
@@ -259,6 +228,7 @@ class Detector:
 
     def __init__(self, weights: dict[str, str] | None = None):
         self.cfg = {k: dict(v) for k, v in DETECTORS.items()}
+        self._closed = next(k for k, c in self.cfg.items() if not c["open_vocab"])   # YOLO11n
         for k, w in (weights or {}).items():
             self.cfg[k]["weights"] = w
         self._models: dict[str, object] = {}
@@ -299,6 +269,27 @@ class Detector:
             self.state[key] = "ready"
         return self._models[key]
 
+    def vocabulary(self) -> list[str]:
+        """The class names the closed-set detector was trained on, read from its
+        weights file (YOLO11n: COCO's 80). Empty if the model cannot load."""
+        try:
+            with _Turn():
+                return list(self._model(self._closed).names.values())
+        except Exception:
+            return []
+
+    def coverage(self, class_names: list[str]) -> list[dict]:
+        """What each detector can do for each of the user's labels, for the badges."""
+        vocab = self.vocabulary()
+        return [{"name": n, "yolo11n": match_name(n, vocab), "yoloe": True} for n in class_names]
+
+    def decoys(self, user_names: list[str]) -> list[str]:
+        """The detector vocabulary minus the user's labels: extra YOLOE prompts, so an
+        object outside the user's labels gets a name of its own (and is dropped)."""
+        vocab = self.vocabulary()
+        taken = {norm_label(n) for n in user_names} | {norm_label(m) for n in user_names if (m := match_name(n, vocab))}
+        return [v for v in vocab if norm_label(v) not in taken]
+
     def warm_up(self, key: str, class_names: list[str]) -> dict:
         """Load a detector and run it once on a blank image, so the first real
         suggestion does not pay for downloads and torch's first-run setup."""
@@ -319,11 +310,12 @@ class Detector:
                 names = [n for n in dict.fromkeys(n.strip() for n in class_names) if n]
                 if not names:
                     raise DetectError("add at least one class first")
-                # Decoys: common object names the user did NOT choose. Without
-                # them YOLOE must squeeze a dog into one of the user's words, so
-                # with only "car, bike, table, chair" a dog can come back as
-                # "chair". With "dog" on offer it is called a dog, and dropped.
-                decoys = yoloe_decoys(names) if use_decoys else []
+                # Decoys: the detector-vocabulary names the user did NOT choose.
+                # Without them YOLOE must squeeze every object into one of the
+                # user's few words, so an animal can come back named as a piece
+                # of furniture. With its own name on offer, it is named correctly
+                # and dropped (listed as "ignored").
+                decoys = self.decoys(names) if use_decoys else []
                 prompts = names + decoys
                 if tuple(prompts) != self._yoloe_names:
                     # Turning names into text embeddings is the slow part of a
@@ -341,7 +333,7 @@ class Detector:
                 own_ids = {v: k for k, v in model.names.items()}
                 taken, unsupported = set(), []
                 for n in class_names:
-                    target = coco_match(n)
+                    target = match_name(n, list(own_ids))
                     if target not in own_ids:
                         unsupported.append(n)
                         continue
@@ -369,7 +361,7 @@ class Detector:
                 continue
             s = {"box": [[x1, y1], [x2, y2]], "score": round(float(score), 3), "class_name": user_name}
             if own_name.lower() != user_name.strip().lower():
-                s["matched_as"] = own_name          # e.g. the user's "table" = COCO's "dining table"
+                s["matched_as"] = own_name          # the detector's own spelling of the user's label
             out.append(s)
         out.sort(key=lambda s: -s["score"])
         return {"suggestions": out, "ms": ms, "unsupported": unsupported, "ignored": ignored,

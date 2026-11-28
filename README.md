@@ -103,8 +103,11 @@ clean:
     encoder.
 - **Choosing classes:** a new project opens the **class picker** (step 2 of a
   new project).
-  - Tick any of the 80 common objects (both detectors can suggest these), or type
-    your own names (YOLOE only).
+  - **Type your own labels**: any names, for any kind of image. Labels belong to
+    the project and are never written in the code. YOLOE can suggest any label
+    you type; MobileSAM outlines anything you click.
+  - Optional shortcuts: the names the fast detector YOLO11n was trained on, read
+    from its model file. Picking one lets YOLO11n suggest it too.
   - Badges show which detector covers each class: `11n` and `E`.
   - Reopen the picker with **Edit classes**. Double-click a class to rename it.
   - The AI only ever suggests your classes. Objects it sees outside them are
